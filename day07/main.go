@@ -29,7 +29,9 @@ func main() {
 		for {
 			input := 0
 			for _, p := range phases {
-				_, input, _ = run(mem, 0, true, p, input)
+				mem0 := make([]int, len(mem))
+				copy(mem0, mem)
+				input = run(&state{mem0, 0, true, p, false}, input)
 			}
 			if input > max {
 				max = input
@@ -46,18 +48,16 @@ func main() {
 		phases := []int{5, 6, 7, 8, 9}
 		max := 0
 		for {
-			var input int
-			var done bool
-			next := make([]cont, 5)
+			input := 0
+			ss := make([]state, 5)
 			for i, p := range phases {
-				done, input, next[i] = run(mem, 0, true, p, input)
+				mem0 := make([]int, len(mem))
+				copy(mem0, mem)
+				ss[i] = state{mem0, 0, true, p, false}
+				input = run(&ss[i], input)
 			}
-			ndone := 0
-			for i := 0; ndone < 5; i = (i + 1) % 5 {
-				done, input, next[i] = next[i](input)
-				if done {
-					ndone++
-				}
+			for i := 0; !ss[4].done; i = (i + 1) % 5 {
+				input = run(&ss[i], input)
 			}
 			if input > max {
 				max = input
@@ -96,20 +96,20 @@ func reverse(nn []int) {
 	}
 }
 
-type cont func(int) (bool, int, cont)
+type state struct {
+	mem      []int
+	ip       int
+	setPhase bool
+	phase    int
+	done     bool
+}
 
-func run(mem0 []int, i int, sendPhase bool, phase, myInput int) (bool, int, cont) {
-	mem := make([]int, len(mem0))
-	copy(mem, mem0)
-
+func run(s *state, input int) (output int) {
+	mem := s.mem
 	var modes [3]int
-	output := myInput // Hack to get back proper value in the end
-
-	ninput := 0
-	done := false
 
 exec:
-	for {
+	for i := s.ip; ; {
 		mode, op := mem[i]/100, mem[i]%100
 		for i := range modes {
 			modes[i] = mode % 10
@@ -126,20 +126,19 @@ exec:
 			i += 4
 		case 3:
 			dst := mem[i+1]
-			if sendPhase && ninput == 0 {
-				mem[dst] = phase
+			if s.setPhase {
+				mem[dst] = s.phase
+				s.setPhase = false
 			} else {
-				mem[dst] = myInput
+				mem[dst] = input
 			}
-			ninput++
 			i += 2
 		case 4:
 			src := mem[i+1]
 			output = value(mem, modes[0], src)
 			i += 2
-			return false, output, func(input int) (bool, int, cont) {
-				return run(mem, i, false, 0, input)
-			}
+			s.ip = i
+			return output
 		case 5:
 			src, jmp := mem[i+1], mem[i+2]
 			if value(mem, modes[0], src) != 0 {
@@ -163,16 +162,15 @@ exec:
 			mem[dst] = bool2int(value(mem, modes[0], src0) == value(mem, modes[1], src1))
 			i += 4
 		case 99:
-			done = true
+			s.done = true
+			s.ip = i
 			break exec
 		default:
 			panic(op)
 		}
 	}
 
-	return done, output, func(input int) (bool, int, cont) {
-		return run(mem, i, false, 0, input)
-	}
+	return input
 }
 
 // Need a form that the go compiler optimizes. See issue #6011.
