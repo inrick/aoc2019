@@ -24,7 +24,7 @@ func main() {
 		moons = append(moons, moon{pos: u})
 	}
 
-	prev := make([][3][4]int, 0)
+	var prev [3][]int
 
 	for t := 0; t < 1000000; t++ {
 		if t == 1000 {
@@ -54,29 +54,26 @@ func main() {
 
 		for i, m := range moons {
 			moons[i].pos = add(m.pos, m.vel)
+			prev[0] = append(prev[0], moons[i].pos.x)
+			prev[1] = append(prev[1], moons[i].pos.y)
+			prev[2] = append(prev[2], moons[i].pos.z)
 		}
-
-		prev = append(prev, [3][4]int{
-			{moons[0].pos.x, moons[1].pos.x, moons[2].pos.x, moons[3].pos.x},
-			{moons[0].pos.y, moons[1].pos.y, moons[2].pos.y, moons[3].pos.y},
-			{moons[0].pos.z, moons[1].pos.z, moons[2].pos.z, moons[3].pos.z},
-		})
 	}
 
-	N := len(prev) - 1
+	N := len(prev[0]) - 1
 	var period [3]int
 	for i := range period {
 	hunt:
 		for j := 0; ; {
 			// Clowning
-			for j++; prev[N][i] != prev[N-j][i]; j++ {
+			for j++; prev[i][N] != prev[i][N-j]; j++ {
 			}
 			for k := 0; k < j; k++ {
-				if prev[N-j-k][i] != prev[N-k][i] {
+				if prev[i][N-j-k] != prev[i][N-k] {
 					continue hunt
 				}
 			}
-			period[i] = j
+			period[i] = j / len(moons)
 			break
 		}
 	}
