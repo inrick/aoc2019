@@ -102,7 +102,7 @@ exec:
 			mem[addr(2)] = param(0) * param(1)
 			s.ip += 4
 		case 3:
-			mem[addr(2)] = s.input
+			mem[addr(0)] = s.input
 			s.ip += 2
 		case 4:
 			s.output = param(0)
